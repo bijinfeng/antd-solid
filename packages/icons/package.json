@@ -1,0 +1,20 @@
+{
+  "name": "@antd-solid/icons",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "packageManager": "pnpm@10.26.2",
+  "dependencies": {
+    "@ant-design/icons-svg": "^4.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.1",
+    "es-toolkit": "^1.44.0",
+    "pkg-types": "^2.3.0"
+  }
+}
