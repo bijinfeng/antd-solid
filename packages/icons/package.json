@@ -9,7 +9,9 @@
   },
   "keywords": [],
   "author": "",
-  "packageManager": "pnpm@10.26.2",
+  "files": [
+    "dist"
+  ],
   "dependencies": {
     "@ant-design/colors": "^8.0.1",
     "@ant-design/icons-svg": "^4.4.2",

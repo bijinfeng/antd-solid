@@ -5,6 +5,9 @@
   "scripts": {
     "build": "tsdown"
   },
+  "files": [
+    "dist"
+  ],
   "devDependencies": {
     "@types/node": "catalog:types",
     "publint": "catalog:dev",

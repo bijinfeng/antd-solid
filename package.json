@@ -5,13 +5,17 @@
 	"main": "index.js",
 	"scripts": {
 		"prepare": "simple-git-hooks",
-		"preinstall": "npx only-allow pnpm"
+		"preinstall": "npx only-allow pnpm",
+		"build": "pnpm -r build",
+		"version": "changeset version && pnpm i --no-frozen-lockfile && git add .",
+		"release": "pnpm build && changeset publish"
 	},
 	"keywords": [],
 	"author": "",
 	"packageManager": "pnpm@10.26.2",
 	"devDependencies": {
 		"@biomejs/biome": "2.4.4",
+		"@changesets/cli": "^2.29.8",
 		"@types/node": "^25.3.1",
 		"lint-staged": "^16.2.7",
 		"picocolors": "^1.1.1",
