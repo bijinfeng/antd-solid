@@ -1,0 +1,22 @@
+{
+  "name": "@antd-solid/util",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsdown"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "publint": "catalog:dev",
+    "tsdown": "catalog:dev",
+    "typescript": "catalog:dev"
+  },
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./dom/canUseDom": "./dist/dom/canUseDom.mjs",
+    "./dom/contains": "./dist/dom/contains.mjs",
+    "./dom/dynamicCSS": "./dist/dom/dynamicCSS.mjs",
+    "./dom/shadow": "./dist/dom/shadow.mjs",
+    "./package.json": "./package.json"
+  }
+}
