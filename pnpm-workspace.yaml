@@ -8,6 +8,7 @@ catalogs:
     typescript: ~5.9.3
     tsdown: ~0.21.0-beta.2
     publint: ^0.3.17
+    rolldown-plugin-solid: ^0.2.1
   types:
     '@types/node': ^25.3.0
 
@@ -15,4 +16,4 @@ cleanupUnusedCatalogs: true
 
 shellEmulator: true
 
-trustPolicy: no-downgrade
+# trustPolicy: no-downgrade

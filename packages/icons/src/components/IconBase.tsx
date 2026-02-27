@@ -48,7 +48,7 @@ interface IconBaseComponent extends Component<IconProps> {
 const IconBase: IconBaseComponent = (props) => {
   const { icon, className, onClick, style, primaryColor, secondaryColor, ...restProps } = props;
 
-  let svgRef: HTMLElement | null = null;
+  let svgRef: HTMLElement | undefined = undefined;
 
   let colors: TwoToneColorPalette = twoToneColorPalette;
   if (primaryColor) {

@@ -1,6 +1,6 @@
 {
-  "name": "@antd-solid/util",
-  "version": "1.0.0",
+  "name": "@antd-solidjs/util",
+  "version": "0.0.1",
   "type": "module",
   "scripts": {
     "build": "tsdown"

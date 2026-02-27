@@ -1,10 +1,10 @@
 import { generate as generateColor } from '@ant-design/colors';
 import type { AbstractNode, IconDefinition } from '@ant-design/icons-svg/lib/types';
-import { useContext, onMount, createComponent, ComponentProps, ValidComponent } from "solid-js";
-import { Dynamic } from "solid-js/web"
-import { updateCSS } from '@antd-solid/util/dom/dynamicCSS';
-import { getShadowRoot } from '@antd-solid/util/dom/shadow';
-import { warning as warningOnce } from '@antd-solid/util'
+import { useContext, onMount, ComponentProps, ValidComponent } from "solid-js";
+import { createDynamic } from "solid-js/web"
+import { updateCSS } from '@antd-solidjs/util/dom/dynamicCSS';
+import { getShadowRoot } from '@antd-solidjs/util/dom/shadow';
+import { warning as warningOnce } from '@antd-solidjs/util'
 
 import IconContext from './components/Context';
 
@@ -13,7 +13,7 @@ function camelCase(input: string) {
 }
 
 export function warning(valid: boolean, message: string) {
-  warningOnce(valid, `[@antd-solid/icons] ${message}`);
+  warningOnce(valid, `[@antd-solidjs/icons] ${message}`);
 }
 
 export function isIconDefinition(target: any): target is IconDefinition {
@@ -31,6 +31,26 @@ export function getSecondaryColor(primaryColor: string): string {
   // choose the second color
   return generateColor(primaryColor)[0];
 }
+
+export function normalizeTwoToneColors(
+  twoToneColor: string | [string, string] | undefined,
+): string[] {
+  if (!twoToneColor) {
+    return [];
+  }
+
+  return Array.isArray(twoToneColor) ? twoToneColor : [twoToneColor];
+}
+
+// These props make sure that the SVG behaviours like general text.
+// Reference: https://blog.prototypr.io/align-svg-icons-to-text-and-say-goodbye-to-font-icons-d44b3d7b26b4
+export const svgBaseProps = {
+  width: '1em',
+  height: '1em',
+  fill: 'currentColor',
+  'aria-hidden': 'true',
+  focusable: 'false',
+};
 
 export const iconStyles = `
 .anticon {
@@ -90,7 +110,7 @@ export const iconStyles = `
 }
 `;
 
-export const useInsertStyles = (eleRef: HTMLElement | null) => {
+export const useInsertStyles = (eleRef?: HTMLElement) => {
   const { csp, prefixCls, layer } = useContext(IconContext);
   let mergedStyleStr = iconStyles;
 
@@ -115,8 +135,7 @@ export const useInsertStyles = (eleRef: HTMLElement | null) => {
 }
 
 export function generate<T extends ValidComponent>(node: AbstractNode, key: string, rootProps?: ComponentProps<T> | false): any {
-  return createComponent(Dynamic, {
-    component: node.tag,
+  return createDynamic(() => node.tag, {
     key,
     ...node.attrs,
     ...rootProps,

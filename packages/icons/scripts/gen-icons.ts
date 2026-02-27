@@ -81,20 +81,11 @@ const templateText = `
 
 import type { AntdIconProps } from '../components/AntdIcon'
 import <%= svgIdentifier %>Svg from '@ant-design/icons-svg/es/asn/<%= svgIdentifier %>.js'
-import { defineComponent } from 'vue'
+import type { Component } from 'solid-js'
 import AntdIcon from '../components/AntdIcon'
 
 <% if (svgBase64) { %> /**![<%= name %>](<%= svgBase64 %>) */ <% } %>
-const <%= svgIdentifier %> = defineComponent<AntdIconProps>(
-  (props) => {
-    return () => {
-      return <AntdIcon {...props} icon={<%= svgIdentifier %>Svg} />
-    }
-  },
-  {
-    name: '<%= svgIdentifier %>',
-  },
-)
+const <%= svgIdentifier %>: Component<AntdIconProps> = (props) => <AntdIcon {...props} icon={<%= svgIdentifier %>Svg} />;
 
 export default <%= svgIdentifier %>
 `
