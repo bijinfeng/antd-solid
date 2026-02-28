@@ -1,40 +1,40 @@
 {
-  "name": "@antd-solidjs/icons",
-  "version": "0.0.1",
-  "description": "",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsdown",
-    "gen:icons": "esno ./scripts/gen-icons.ts"
-  },
-  "keywords": [],
-  "author": "",
-  "files": [
-    "dist"
-  ],
-  "dependencies": {
-    "@ant-design/colors": "^8.0.1",
-    "@ant-design/icons-svg": "^4.4.2",
-    "@antd-solidjs/util": "workspace:*",
-    "@solid-primitives/refs": "^1.1.3",
-    "clsx": "^2.1.1"
-  },
-  "devDependencies": {
-    "@types/node": "catalog:types",
-    "es-toolkit": "^1.44.0",
-    "esno": "^4.8.0",
-    "pkg-types": "^2.3.0",
-    "publint": "catalog:dev",
-    "rolldown-plugin-solid": "catalog:dev",
-    "solid-js": "^1.9.11",
-    "tsdown": "catalog:dev",
-    "typescript": "catalog:dev",
-    "vite": "^7.3.1",
-    "vite-plugin-solid": "^2.11.10"
-  },
-  "exports": {
-    ".": "./dist/index.js",
-    "./package.json": "./package.json"
-  }
+	"name": "@antd-solidjs/icons",
+	"version": "0.0.1",
+	"description": "",
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "tsdown",
+		"gen:icons": "esno ./scripts/gen-icons.ts"
+	},
+	"keywords": [],
+	"author": "",
+	"files": [
+		"dist"
+	],
+	"dependencies": {
+		"@ant-design/colors": "^8.0.1",
+		"@ant-design/icons-svg": "^4.4.2",
+		"@antd-solidjs/util": "workspace:*",
+		"@solid-primitives/refs": "^1.1.3",
+		"clsx": "^2.1.1"
+	},
+	"devDependencies": {
+		"@types/node": "catalog:types",
+		"es-toolkit": "^1.44.0",
+		"esno": "^4.8.0",
+		"pkg-types": "^2.3.0",
+		"publint": "catalog:dev",
+		"rolldown-plugin-solid": "catalog:dev",
+		"solid-js": "catalog:dev",
+		"tsdown": "catalog:dev",
+		"typescript": "catalog:dev",
+		"vite": "catalog:dev",
+		"vite-plugin-solid": "catalog:dev"
+	},
+	"exports": {
+		".": "./dist/index.js",
+		"./package.json": "./package.json"
+	}
 }

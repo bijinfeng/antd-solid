@@ -8,7 +8,10 @@ catalogs:
     typescript: ~5.9.3
     tsdown: ~0.21.0-beta.2
     publint: ^0.3.17
+    vite: ^7.3.1
+    solid-js: ^1.9.11
     rolldown-plugin-solid: ^0.2.1
+    vite-plugin-solid: ^2.11.10
   types:
     '@types/node': ^25.3.0
 
