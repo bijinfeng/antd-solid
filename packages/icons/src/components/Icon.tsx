@@ -1,4 +1,4 @@
-import { JSX, Component, useContext } from "solid-js"
+import { JSX, Component, useContext, createSignal } from "solid-js"
 import { clsx } from "clsx"
 import { mergeRefs } from "@solid-primitives/refs";
 
@@ -42,7 +42,7 @@ const Icon: Component<IconComponentProps> = (props) => {
     ...restProps
   } = props;
 
-  let iconRef: HTMLSpanElement | undefined = undefined;
+  const [iconRef, setIconRef] = createSignal<HTMLSpanElement>();
 
   warning(Boolean(Component || children), 'Should have `component` prop or `children`.');
 
@@ -113,7 +113,7 @@ const Icon: Component<IconComponentProps> = (props) => {
     <span
       role="img"
       {...restProps}
-      ref={mergeRefs(ref, el => (iconRef = el))}
+      ref={mergeRefs(ref, setIconRef)}
       tabIndex={iconTabIndex}
       onClick={onClick}
       class={classString}

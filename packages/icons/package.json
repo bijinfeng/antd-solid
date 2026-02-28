@@ -4,6 +4,7 @@
   "description": "",
   "type": "module",
   "scripts": {
+    "dev": "vite",
     "build": "tsdown",
     "gen:icons": "esno ./scripts/gen-icons.ts"
   },
@@ -28,7 +29,9 @@
     "rolldown-plugin-solid": "catalog:dev",
     "solid-js": "^1.9.11",
     "tsdown": "catalog:dev",
-    "typescript": "catalog:dev"
+    "typescript": "catalog:dev",
+    "vite": "^7.3.1",
+    "vite-plugin-solid": "^2.11.10"
   },
   "exports": {
     ".": "./dist/index.js",

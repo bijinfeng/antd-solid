@@ -1,5 +1,5 @@
 import type { AbstractNode, IconDefinition } from '@ant-design/icons-svg/lib/types';
-import { type JSX, type Component } from "solid-js";
+import { type JSX, type Component, createSignal } from "solid-js";
 
 import { generate, getSecondaryColor, useInsertStyles, isIconDefinition, warning } from '../utils';
 
@@ -48,7 +48,7 @@ interface IconBaseComponent extends Component<IconProps> {
 const IconBase: IconBaseComponent = (props) => {
   const { icon, className, onClick, style, primaryColor, secondaryColor, ...restProps } = props;
 
-  let svgRef: HTMLElement | undefined = undefined;
+  const [svgRef, setSvgRef] = createSignal<HTMLElement>();
 
   let colors: TwoToneColorPalette = twoToneColorPalette;
   if (primaryColor) {
@@ -84,7 +84,7 @@ const IconBase: IconBaseComponent = (props) => {
     fill: 'currentColor',
     'aria-hidden': 'true',
     ...restProps,
-    ref: svgRef,
+    ref: setSvgRef,
   });
 }
 

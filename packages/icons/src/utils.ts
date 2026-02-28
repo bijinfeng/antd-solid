@@ -1,6 +1,6 @@
 import { generate as generateColor } from '@ant-design/colors';
 import type { AbstractNode, IconDefinition } from '@ant-design/icons-svg/lib/types';
-import { useContext, onMount, ComponentProps, ValidComponent } from "solid-js";
+import { useContext, onMount, ComponentProps, ValidComponent, Accessor } from "solid-js";
 import { createDynamic } from "solid-js/web"
 import { updateCSS } from '@antd-solidjs/util/dom/dynamicCSS';
 import { getShadowRoot } from '@antd-solidjs/util/dom/shadow';
@@ -110,7 +110,7 @@ export const iconStyles = `
 }
 `;
 
-export const useInsertStyles = (eleRef?: HTMLElement) => {
+export const useInsertStyles = (eleRef: Accessor<HTMLElement | undefined>) => {
   const { csp, prefixCls, layer } = useContext(IconContext);
   let mergedStyleStr = iconStyles;
 
@@ -123,9 +123,10 @@ export const useInsertStyles = (eleRef?: HTMLElement) => {
   }
 
   onMount(() => {
-    if (!eleRef) return;
+    const ele = eleRef();
+    if (!ele) return;
     
-    const shadowRoot = getShadowRoot(eleRef);
+    const shadowRoot = getShadowRoot(ele);
     updateCSS(mergedStyleStr, '@ant-design-icons', {
       prepend: !layer,
       csp,
