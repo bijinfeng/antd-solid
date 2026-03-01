@@ -9,6 +9,9 @@
   ],
   "compilerOptions": {
     "jsx": "preserve",
-    "jsxImportSource": "solid-js"
+    "jsxImportSource": "solid-js",
+    "paths": {
+      "antd-solidjs": ["../packages/antd-solid/src/index.ts"]
+    }
   }
 }
