@@ -4,14 +4,9 @@
     "moduleResolution": "node",
     "baseUrl": "./",
     "jsx": "preserve",
+    "jsxImportSource": "solid-js",
     "declaration": true,
     "skipLibCheck": true,
-    "esModuleInterop": true,
-    "paths": {
-      "@/*": ["src/*"],
-      "@@/*": ["src/.dumi/*"],
-      "rc-util": ["src/index.ts"],
-      "rc-util/es/*": ["src/*"]
-    }
+    "esModuleInterop": true
   }
 }

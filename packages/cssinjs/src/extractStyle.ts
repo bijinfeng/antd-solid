@@ -1,127 +1,111 @@
-import type Entity from "./Cache";
+import type Cache from './Cache';
+import {
+  extract as tokenExtractStyle,
+  TOKEN_PREFIX,
+} from './hooks/useCacheToken';
+import {
+  CSS_VAR_PREFIX,
+  extract as cssVarExtractStyle,
+} from './hooks/useCSSVarRegister';
+import {
+  extract as styleExtractStyle,
+  STYLE_PREFIX,
+} from './hooks/useStyleRegister';
+import { toStyleStr } from './util';
+import {
+  ATTR_CACHE_MAP,
+  serialize as serializeCacheMap,
+} from './util/cacheMapUtil';
 
-export interface ExtractStyleOptions {
-	/**
-	 * Whether to remove style tags after extraction
-	 */
-	plain?: boolean;
+const ExtractStyleFns = {
+  [STYLE_PREFIX]: styleExtractStyle,
+  [TOKEN_PREFIX]: tokenExtractStyle,
+  [CSS_VAR_PREFIX]: cssVarExtractStyle,
+};
+
+type ExtractStyleType = keyof typeof ExtractStyleFns;
+
+function isNotNull<T>(value: T | null): value is T {
+  return value !== null;
 }
 
-/**
- * Extract all styles from cache for SSR
- * This function collects all registered styles and returns them as a string
- */
-export function extractStyle(
-	cache: Entity,
-	options: ExtractStyleOptions = {},
-): string {
-	const { plain = false } = options;
-	const _styles: string[] = [];
-	const styleMap = new Map<string, string>();
+export default function extractStyle(
+  cache: Cache,
+  options?:
+    | boolean
+    | {
+        plain?: boolean;
+        types?: ExtractStyleType | ExtractStyleType[];
+        once?: boolean;
+      },
+) {
+  const { plain = false, types = ['style', 'token', 'cssVar'], once = false } =
+    typeof options === 'boolean' ? { plain: options } : options || {};
 
-	// Iterate through cache and collect styles
-	cache.cache.forEach((value, key) => {
-		if (typeof value === "string") {
-			styleMap.set(key, value);
-		}
-	});
+  const matchPrefixRegexp = new RegExp(
+    `^(${(typeof types === 'string' ? [types] : types).join('|')})%`,
+  );
 
-	// Get all style elements from document
-	if (typeof document !== "undefined") {
-		const styleElements = document.querySelectorAll(
-			"style[data-antd-cssinjs-cache-path]",
-		);
+  // prefix with `style` is used for `useStyleRegister` to cache style context
+  const styleKeys = Array.from(cache.cache.keys()).filter((key) =>
+    matchPrefixRegexp.test(key),
+  );
 
-		styleElements.forEach((styleEl) => {
-			const path = styleEl.getAttribute("data-antd-cssinjs-cache-path");
-			const content = styleEl.innerHTML;
+  // Common effect styles like animation
+  const effectStyles: Record<string, boolean> = {};
 
-			if (path && content) {
-				styleMap.set(path, content);
+  // Mapping of cachePath to style hash
+  const cachePathMap: Record<string, string> = {};
 
-				// Remove style element if not plain mode
-				if (!plain) {
-					styleEl.remove();
-				}
-			}
-		});
-	}
+  let styleText = '';
 
-	// Convert map to array and sort by path for consistent output
-	const sortedStyles = Array.from(styleMap.entries())
-		.sort(([a], [b]) => a.localeCompare(b))
-		.map(([_, content]) => content);
+  styleKeys
+    .map<[order: number, style: string, updateTime: number] | null>((key) => {
+      if (once && cache.extracted.has(key)) {
+        return null; // Skip if already extracted
+      }
 
-	return sortedStyles.join("\n");
-}
+      const cachePath = key.replace(matchPrefixRegexp, '').replace(/%/g, '|');
+      const [prefix] = key.split('%');
+      const extractFn = ExtractStyleFns[prefix as keyof typeof ExtractStyleFns];
+      const extractedStyle = extractFn(cache.cache.get(key)![1], effectStyles, {
+        plain,
+      });
+      if (!extractedStyle) {
+        return null;
+      }
+      const updateTime = cache.updateTimes.get(key) || 0;
+      const [order, styleId, styleStr] = extractedStyle;
+      if (key.startsWith('style')) {
+        cachePathMap[cachePath] = styleId;
+      }
 
-/**
- * Create style tags from extracted style string
- * Used for hydration on client side
- */
-export function createStyleTagsFromCache(
-	styleContent: string,
-	_cache: Entity,
-): void {
-	if (typeof document === "undefined") {
-		return;
-	}
+      // record that this style has been extracted
+      cache.extracted.add(key);
 
-	const styles = styleContent.split("\n").filter(Boolean);
+      return [order, styleStr, updateTime];
+    })
+    .filter(isNotNull)
+    .sort(([o1, , u1], [o2, , u2]) => {
+      if (o1 !== o2) {
+        return o1 - o2;
+      }
+      return u1 - u2;
+    })
+    .forEach(([, style]) => {
+      styleText += style;
+    });
 
-	styles.forEach((css, index) => {
-		const style = document.createElement("style");
-		style.setAttribute("data-antd-cssinjs-cache-path", `ssr-${index}`);
-		style.innerHTML = css;
-		document.head.appendChild(style);
-	});
-}
+  // ==================== Fill Cache Path ====================
+  styleText += toStyleStr(
+    `.${ATTR_CACHE_MAP}{content:"${serializeCacheMap(cachePathMap)}";}`,
+    undefined,
+    undefined,
+    {
+      [ATTR_CACHE_MAP]: ATTR_CACHE_MAP,
+    },
+    plain,
+  );
 
-/**
- * Create a style element with given content
- */
-export function createStyleElement(
-	css: string,
-	options: {
-		path?: string[];
-		hashId?: string;
-		prepend?: boolean;
-		container?: Element | ShadowRoot;
-	} = {},
-): HTMLStyleElement | null {
-	if (typeof document === "undefined") {
-		return null;
-	}
-
-	const {
-		path = [],
-		hashId = "",
-		prepend = false,
-		container = document.head,
-	} = options;
-
-	const styleId = [...(hashId ? [hashId] : []), ...path].join("-");
-
-	// Check if style already exists
-	const existingStyle = document.getElementById(styleId);
-	if (existingStyle) {
-		return existingStyle as HTMLStyleElement;
-	}
-
-	const style = document.createElement("style");
-	style.id = styleId;
-
-	if (path.length > 0) {
-		style.setAttribute("data-antd-cssinjs-cache-path", path.join("%"));
-	}
-
-	style.innerHTML = css;
-
-	if (prepend && container.firstChild) {
-		container.insertBefore(style, container.firstChild);
-	} else {
-		container.appendChild(style);
-	}
-
-	return style;
+  return styleText;
 }

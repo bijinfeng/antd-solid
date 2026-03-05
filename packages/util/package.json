@@ -2,6 +2,8 @@
   "name": "@antd-solidjs/util",
   "version": "0.0.1",
   "type": "module",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "scripts": {
     "build": "tsdown"
   },

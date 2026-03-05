@@ -1,19 +1,19 @@
-import { hash } from "./util";
+import type { CSSInterpolation } from './hooks/useStyleRegister';
 
-class Keyframes {
-	name: string;
-	style: any;
-	_id: string;
+class Keyframe {
+  private name: string;
+  style: CSSInterpolation;
 
-	constructor(name: string, style: any) {
-		this.name = name;
-		this.style = style;
-		this._id = `antd-keyframes-${name}-${hash(JSON.stringify(style))}`;
-	}
+  constructor(name: string, style: CSSInterpolation) {
+    this.name = name;
+    this.style = style;
+  }
 
-	getName(hashId: string = ""): string {
-		return hashId ? `${hashId}-${this.name}` : this.name;
-	}
+  getName(hashId: string = ''): string {
+    return hashId ? `${hashId}-${this.name}` : this.name;
+  }
+
+  _keyframe = true;
 }
 
-export default Keyframes;
+export default Keyframe;

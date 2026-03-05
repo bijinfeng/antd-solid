@@ -5,13 +5,14 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
+    "isolatedDeclarations": false,
     "esModuleInterop": true,
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
-    "types": ["vite/client"],
+    "types": ["vitest/globals"],
     "outDir": "dist",
     "declaration": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
   },
-  "include": ["src"]
+  "include": ["src"],
 }

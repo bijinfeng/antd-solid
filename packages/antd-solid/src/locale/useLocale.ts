@@ -1,0 +1,37 @@
+import { createMemo, useContext } from 'solid-js'
+
+import type { Locale } from '.';
+import type { LocaleContextProps } from './context';
+import LocaleContext from './context';
+import defaultLocaleData from './en_US';
+
+export type LocaleComponentName = Exclude<keyof Locale, 'locale'>;
+
+const useLocale = <C extends LocaleComponentName = LocaleComponentName>(
+  componentName: C,
+  defaultLocale?: Locale[C] | (() => Locale[C]),
+): readonly [NonNullable<Locale[C]>, string] => {
+  const fullLocale = useContext<LocaleContextProps | undefined>(LocaleContext);
+
+  const getLocale = createMemo<NonNullable<Locale[C]>>(() => {
+    const locale = defaultLocale || defaultLocaleData[componentName];
+    const localeFromContext = fullLocale?.[componentName] ?? {};
+    return {
+      ...(typeof locale === 'function' ? locale() : locale),
+      ...(localeFromContext || {}),
+    };
+  });
+
+  const getLocaleCode = createMemo<string>(() => {
+    const localeCode = fullLocale?.locale;
+    // Had use LocaleProvide but didn't set locale
+    if (fullLocale?.exist && !localeCode) {
+      return defaultLocaleData.locale;
+    }
+    return localeCode!;
+  });
+
+  return [getLocale(), getLocaleCode()] as const;
+};
+
+export default useLocale;

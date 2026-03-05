@@ -3,16 +3,20 @@
 	"version": "0.0.1",
 	"description": "",
 	"type": "module",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.js",
+  "typings": "./dist/index.d.ts",
 	"scripts": {
 		"dev": "vite",
 		"build": "tsdown",
 		"gen:icons": "esno ./scripts/gen-icons.ts"
 	},
-	"keywords": [],
-	"author": "",
 	"files": [
 		"dist"
 	],
+	"peerDependencies": {
+		"solid-js": "catalog:dev"
+	},
 	"dependencies": {
 		"@ant-design/colors": "^8.0.1",
 		"@ant-design/icons-svg": "^4.4.2",
@@ -32,9 +36,5 @@
 		"typescript": "catalog:dev",
 		"vite": "catalog:dev",
 		"vite-plugin-solid": "catalog:dev"
-	},
-	"exports": {
-		".": "./dist/index.js",
-		"./package.json": "./package.json"
 	}
 }

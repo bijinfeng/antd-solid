@@ -8,6 +8,9 @@ export default defineConfig([
 		unbundle: true,
 		// use the solid plugin to handle jsx
 		plugins: [solid()],
+		define: {
+			__antd_solid_version__: '0.0.1'
+		}
 	},
 	{
 		platform: "neutral",

@@ -1,63 +1,63 @@
 export type KeyType = string | number;
+type ValueType = [number, any]; // [times, realValue]
+
+const SPLIT = '%';
+
+/** Connect key with `SPLIT` */
+export function pathKey(keys: KeyType[]) {
+  return keys.join(SPLIT);
+}
+
+/** Record update id for extract static style order. */
+let updateId = 0;
 
 class Entity {
-	instanceId: string;
-	cache: Map<string, any>;
+  instanceId: string;
+  constructor(instanceId: string) {
+    this.instanceId = instanceId;
+  }
 
-	constructor(instanceId: string) {
-		this.instanceId = instanceId;
-		this.cache = new Map();
-	}
+  /** @private Internal cache map. Do not access this directly */
+  cache = new Map<string, ValueType>();
 
-	get(keys: KeyType[]): any {
-		return this.cache.get(keys.join("%"));
-	}
+  /** @private Record update times for each key */
+  updateTimes = new Map<string, number>();
 
-	update(keys: KeyType[], valueFn: (origin: any) => any): void {
-		const path = keys.join("%");
-		const prevValue = this.cache.get(path);
-		const nextValue = valueFn(prevValue);
-		this.cache.set(path, nextValue);
-	}
+  extracted: Set<string> = new Set();
 
-	/**
-	 * Clear all cache
-	 */
-	clear(): void {
-		this.cache.clear();
-	}
+  get(keys: KeyType[]): ValueType | null {
+    return this.opGet(pathKey(keys));
+  }
 
-	/**
-	 * Delete specific cache entry
-	 */
-	delete(keys: KeyType[]): boolean {
-		return this.cache.delete(keys.join("%"));
-	}
+  /** A fast get cache with `get` concat. */
+  opGet(keyPathStr: string): ValueType | null {
+    return this.cache.get(keyPathStr) || null;
+  }
 
-	/**
-	 * Check if cache has specific entry
-	 */
-	has(keys: KeyType[]): boolean {
-		return this.cache.has(keys.join("%"));
-	}
+  update(
+    keys: KeyType[],
+    valueFn: (origin: ValueType | null) => ValueType | null,
+  ) {
+    return this.opUpdate(pathKey(keys), valueFn);
+  }
 
-	/**
-	 * Get cache size
-	 */
-	get size(): number {
-		return this.cache.size;
-	}
+  /** A fast get cache with `get` concat. */
+  opUpdate(
+    keyPathStr: string,
+    valueFn: (origin: ValueType | null) => ValueType | null,
+  ) {
+    const prevValue = this.cache.get(keyPathStr)!;
+    const nextValue = valueFn(prevValue);
+
+    if (nextValue === null) {
+      this.cache.delete(keyPathStr);
+      this.updateTimes.delete(keyPathStr);
+    } else {
+      this.cache.set(keyPathStr, nextValue);
+      this.updateTimes.set(keyPathStr, updateId);
+      updateId += 1;
+    }
+  }
 }
 
-/**
- * Create a new cache instance
- * @param instanceId - Unique identifier for the cache instance
- */
-export function createCache(instanceId?: string): Entity {
-	const id =
-		instanceId ||
-		`cssinjs-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-	return new Entity(id);
-}
-
-export default createCache;
+export default Entity;

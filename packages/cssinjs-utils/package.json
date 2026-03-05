@@ -1,0 +1,32 @@
+{
+  "name": "@antd-solidjs/cssinjs-utils",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "A cssinjs util library to support antd-solid and its ecosystem libraries.",
+  "main": "dist/index.mjs",
+  "types": "dist/index.d.mts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "solid-js": "catalog:dev"
+  },
+  "dependencies": {
+    "@antd-solidjs/cssinjs": "workspace:*",
+    "@antd-solidjs/util": "workspace:*"
+  },
+  "devDependencies": {
+    "rolldown-plugin-solid": "catalog:dev",
+    "solid-js": "catalog:dev",
+    "tsdown": "catalog:dev",
+    "typescript": "catalog:dev"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

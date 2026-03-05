@@ -1,40 +1,41 @@
-export type DerivativeFunc<
-	DesignToken extends object,
-	DerivativeToken extends object,
-> = (token: DesignToken) => DerivativeToken;
-
-export type TokenType = object;
+import { warning } from '@antd-solidjs/util';
+import type { DerivativeFunc, TokenType } from './interface';
 
 let uuid = 0;
 
+/**
+ * Theme with algorithms to derive tokens from design tokens.
+ * Use `createTheme` first which will help to manage the theme instance cache.
+ */
 export default class Theme<
-	DesignToken extends TokenType,
-	DerivativeToken extends TokenType,
+  DesignToken extends TokenType,
+  DerivativeToken extends TokenType,
 > {
-	private derivatives: DerivativeFunc<DesignToken, DerivativeToken>[];
+  private derivatives: DerivativeFunc<DesignToken, DerivativeToken>[];
+  public readonly id: number;
 
-	public readonly id: number;
+  constructor(
+    derivatives:
+      | DerivativeFunc<DesignToken, DerivativeToken>
+      | DerivativeFunc<DesignToken, DerivativeToken>[],
+  ) {
+    this.derivatives = Array.isArray(derivatives) ? derivatives : [derivatives];
+    this.id = uuid;
 
-	constructor(
-		derivatives:
-			| DerivativeFunc<DesignToken, DerivativeToken>
-			| DerivativeFunc<DesignToken, DerivativeToken>[],
-	) {
-		this.derivatives = Array.isArray(derivatives) ? derivatives : [derivatives];
-		this.id = uuid;
+    if (derivatives.length === 0) {
+      warning(
+        derivatives.length > 0,
+        '[Ant Design CSS-in-JS] Theme should have at least one derivative function.',
+      );
+    }
 
-		if (derivatives.length === 0) {
-			console.warn(
-				"[antd-cssinjs] Theme should have at least one derivative function.",
-			);
-		}
+    uuid += 1;
+  }
 
-		uuid += 1;
-	}
-
-	getDerivativeToken(token: DesignToken): DerivativeToken {
-		return this.derivatives.reduce<DerivativeToken>((_result, derivative) => {
-			return derivative(token);
-		}, undefined as any);
-	}
+  getDerivativeToken(token: DesignToken): DerivativeToken {
+    return this.derivatives.reduce<DerivativeToken>(
+      (result, derivative) => derivative(token, result),
+      undefined as any,
+    );
+  }
 }

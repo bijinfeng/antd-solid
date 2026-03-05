@@ -53,6 +53,12 @@
 		"vitest": "^4.0.16"
 	},
 	"dependencies": {
-		"@antd-solidjs/cssinjs": "workspace:*"
+		"@ant-design/colors": "^8.0.1",
+		"@ant-design/fast-color": "^3.0.1",
+		"@antd-solidjs/icons": "workspace:*",
+		"@antd-solidjs/cssinjs": "workspace:*",
+		"@antd-solidjs/cssinjs-utils": "workspace:*",
+		"@antd-solidjs/util": "workspace:*",
+		"clsx": "^2.1.1"
 	}
 }
