@@ -1,0 +1,27 @@
+{
+	"name": "@antd-solidjs/component",
+	"type": "module",
+	"version": "0.0.0",
+	"description": "",
+	"scripts": {
+		"dev": "vite",
+		"build": "tsdown"
+	},
+	"peerDependencies": {
+		"solid-js": "catalog:dev"
+	},
+	"dependencies": {
+		"@antd-solidjs/util": "workspace:*",
+		"@solid-primitives/refs": "^1.1.3",
+		"clsx": "catalog:prod"
+	},
+	"devDependencies": {
+		"@types/node": "catalog:types",
+		"publint": "catalog:dev",
+		"solid-js": "catalog:dev",
+		"tsdown": "catalog:dev",
+		"typescript": "catalog:dev",
+		"vite": "^7.3.1",
+		"vite-plugin-solid": "catalog:dev"
+	}
+}

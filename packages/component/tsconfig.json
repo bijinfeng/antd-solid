@@ -1,0 +1,12 @@
+{
+	"compilerOptions": {
+		"target": "esnext",
+		"moduleResolution": "bundler",
+		"baseUrl": "./",
+		"jsx": "preserve",
+		"jsxImportSource": "solid-js",
+		"declaration": true,
+		"skipLibCheck": true,
+		"esModuleInterop": true
+	}
+}

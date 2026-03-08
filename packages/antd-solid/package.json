@@ -59,6 +59,6 @@
 		"@antd-solidjs/cssinjs": "workspace:*",
 		"@antd-solidjs/cssinjs-utils": "workspace:*",
 		"@antd-solidjs/util": "workspace:*",
-		"clsx": "^2.1.1"
+		"clsx": "catalog:prod"
 	}
 }

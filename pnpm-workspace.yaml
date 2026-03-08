@@ -13,6 +13,8 @@ catalogs:
     solid-js: ^1.9.11
     rolldown-plugin-solid: ^0.2.1
     vite-plugin-solid: ^2.11.10
+  prod:
+    clsx: ^2.1.1
   types:
     '@types/node': ^25.3.0
 

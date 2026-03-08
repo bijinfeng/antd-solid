@@ -1,0 +1,322 @@
+import type { JSX } from "solid-js";
+import { createEffect, createMemo, createSignal, onCleanup } from "solid-js";
+
+import type { CSSMotionProps } from "../CSSMotion";
+import type {
+	MotionEvent,
+	MotionEventHandler,
+	MotionPrepareEventHandler,
+	MotionStatus,
+	StepStatus,
+} from "../interface";
+import {
+	STATUS_APPEAR,
+	STATUS_ENTER,
+	STATUS_LEAVE,
+	STATUS_NONE,
+	STEP_ACTIVE,
+	STEP_PREPARE,
+	STEP_PREPARED,
+	STEP_START,
+} from "../interface";
+import useDomMotionEvents from "./useDomMotionEvents";
+import useIsomorphicLayoutEffect from "./useIsomorphicLayoutEffect";
+import useStepQueue, { DoStep, isActive, SkipStep } from "./useStepQueue";
+
+export default function useStatus(
+	supportMotion: boolean,
+	visible: boolean,
+	getElement: () => HTMLElement,
+	{
+		motionEnter = true,
+		motionAppear = true,
+		motionLeave = true,
+		motionDeadline,
+		motionLeaveImmediately,
+		onAppearPrepare,
+		onEnterPrepare,
+		onLeavePrepare,
+		onAppearStart,
+		onEnterStart,
+		onLeaveStart,
+		onAppearActive,
+		onEnterActive,
+		onLeaveActive,
+		onAppearEnd,
+		onEnterEnd,
+		onLeaveEnd,
+		onVisibleChanged,
+	}: CSSMotionProps,
+): [
+	status: () => MotionStatus,
+	stepStatus: StepStatus,
+	style: JSX.CSSProperties,
+	visible: boolean,
+	styleReady: "NONE" | boolean,
+] {
+	// Used for outer render usage to avoid `visible: false & status: none` to render nothing
+	const [asyncVisible, setAsyncVisible] = createSignal<boolean>();
+	const [getStatus, setStatus] = createSignal<MotionStatus>(STATUS_NONE);
+	const [style, setStyle] = createSignal<
+		[style: JSX.CSSProperties | undefined, step: StepStatus]
+	>([null, null]);
+
+	const currentStatus = getStatus();
+
+	let mountedRef = false;
+	const deadlineRef = null;
+
+	// =========================== Dom Node ===========================
+	function getDomElement() {
+		return getElement();
+	}
+
+	// ========================== Motion End ==========================
+	let activeRef = false;
+
+	/**
+	 * Clean up status & style
+	 */
+	function updateMotionEndStatus() {
+		setStatus(STATUS_NONE);
+		setStyle([null, null]);
+	}
+
+	const onInternalMotionEnd = (event: MotionEvent) => {
+		const status = getStatus();
+		// Do nothing since not in any transition status.
+		// This may happen when `motionDeadline` trigger.
+		if (status === STATUS_NONE) {
+			return;
+		}
+
+		const element = getDomElement();
+		if (event && !event.deadline && event.target !== element) {
+			// event exists
+			// not initiated by deadline
+			// transitionEnd not fired by inner elements
+			return;
+		}
+
+		const currentActive = activeRef;
+
+		let canEnd: boolean | void;
+		if (status === STATUS_APPEAR && currentActive) {
+			canEnd = onAppearEnd?.(element, event);
+		} else if (status === STATUS_ENTER && currentActive) {
+			canEnd = onEnterEnd?.(element, event);
+		} else if (status === STATUS_LEAVE && currentActive) {
+			canEnd = onLeaveEnd?.(element, event);
+		}
+
+		// Only update status when `canEnd` and not destroyed
+		if (currentActive && canEnd !== false) {
+			updateMotionEndStatus();
+		}
+	};
+
+	const [patchMotionEvents] = useDomMotionEvents(onInternalMotionEnd);
+
+	// ============================= Step =============================
+	const getEventHandlers = (targetStatus: MotionStatus) => {
+		switch (targetStatus) {
+			case STATUS_APPEAR:
+				return {
+					[STEP_PREPARE]: onAppearPrepare,
+					[STEP_START]: onAppearStart,
+					[STEP_ACTIVE]: onAppearActive,
+				};
+
+			case STATUS_ENTER:
+				return {
+					[STEP_PREPARE]: onEnterPrepare,
+					[STEP_START]: onEnterStart,
+					[STEP_ACTIVE]: onEnterActive,
+				};
+
+			case STATUS_LEAVE:
+				return {
+					[STEP_PREPARE]: onLeavePrepare,
+					[STEP_START]: onLeaveStart,
+					[STEP_ACTIVE]: onLeaveActive,
+				};
+
+			default:
+				return {};
+		}
+	};
+
+	const eventHandlers = createMemo<{
+		[STEP_PREPARE]?: MotionPrepareEventHandler;
+		[STEP_START]?: MotionEventHandler;
+		[STEP_ACTIVE]?: MotionEventHandler;
+	}>(() => getEventHandlers(currentStatus));
+
+	const [startStep, step] = useStepQueue(
+		currentStatus,
+		!supportMotion,
+		(newStep) => {
+			// Only prepare step can be skip
+			if (newStep === STEP_PREPARE) {
+				const onPrepare = eventHandlers[STEP_PREPARE];
+				if (!onPrepare) {
+					return SkipStep;
+				}
+
+				return onPrepare(getDomElement());
+			}
+
+			// Rest step is sync update
+			if (newStep in eventHandlers) {
+				setStyle([
+					eventHandlers[newStep]?.(getDomElement(), null) || null,
+					newStep,
+				]);
+			}
+
+			if (newStep === STEP_ACTIVE && currentStatus !== STATUS_NONE) {
+				// Patch events when motion needed
+				patchMotionEvents(getDomElement());
+
+				if (motionDeadline > 0) {
+					clearTimeout(deadlineRef.current);
+					deadlineRef.current = setTimeout(() => {
+						onInternalMotionEnd({
+							deadline: true,
+						} as MotionEvent);
+					}, motionDeadline);
+				}
+			}
+
+			if (newStep === STEP_PREPARED) {
+				updateMotionEndStatus();
+			}
+
+			return DoStep;
+		},
+	);
+
+	const active = isActive(step);
+	activeRef = active;
+
+	// ============================ Status ============================
+	let visibleRef: boolean | null = null;
+
+	// Update with new status
+	useIsomorphicLayoutEffect(() => {
+		// When use Suspense, the `visible` will repeat trigger,
+		// But not real change of the `visible`, we need to skip it.
+		// https://github.com/ant-design/ant-design/issues/44379
+		if (mountedRef && visibleRef === visible) {
+			return;
+		}
+
+		setAsyncVisible(visible);
+
+		const isMounted = mountedRef;
+		mountedRef = true;
+
+		// if (!supportMotion) {
+		//   return;
+		// }
+
+		let nextStatus: MotionStatus;
+
+		// Appear
+		if (!isMounted && visible && motionAppear) {
+			nextStatus = STATUS_APPEAR;
+		}
+
+		// Enter
+		if (isMounted && visible && motionEnter) {
+			nextStatus = STATUS_ENTER;
+		}
+
+		// Leave
+		if (
+			(isMounted && !visible && motionLeave) ||
+			(!isMounted && motionLeaveImmediately && !visible && motionLeave)
+		) {
+			nextStatus = STATUS_LEAVE;
+		}
+
+		const nextEventHandlers = getEventHandlers(nextStatus);
+
+		// Update to next status
+		if (nextStatus && (supportMotion || nextEventHandlers[STEP_PREPARE])) {
+			setStatus(nextStatus);
+			startStep();
+		} else {
+			// Set back in case no motion but prev status has prepare step
+			setStatus(STATUS_NONE);
+		}
+
+		visibleRef = visible;
+	});
+
+	// ============================ Effect ============================
+	// Reset when motion changed
+	createEffect(() => {
+		if (
+			// Cancel appear
+			(currentStatus === STATUS_APPEAR && !motionAppear) ||
+			// Cancel enter
+			(currentStatus === STATUS_ENTER && !motionEnter) ||
+			// Cancel leave
+			(currentStatus === STATUS_LEAVE && !motionLeave)
+		) {
+			setStatus(STATUS_NONE);
+		}
+	});
+
+	onCleanup(() => {
+		mountedRef = false;
+		clearTimeout(deadlineRef.current);
+	});
+
+	// Trigger `onVisibleChanged`
+	let firstMountChangeRef = false;
+	createEffect(() => {
+		// [visible & motion not end] => [!visible & motion end] still need trigger onVisibleChanged
+		if (asyncVisible()) {
+			firstMountChangeRef = true;
+		}
+
+		if (asyncVisible() !== undefined && currentStatus === STATUS_NONE) {
+			// Skip first render is invisible since it's nothing changed
+			if (firstMountChangeRef || asyncVisible()) {
+				onVisibleChanged?.(asyncVisible());
+			}
+			firstMountChangeRef = true;
+		}
+	});
+
+	// ============================ Styles ============================
+	let mergedStyle = style[0];
+	if (eventHandlers[STEP_PREPARE] && step === STEP_START) {
+		mergedStyle = {
+			transition: "none",
+			...mergedStyle,
+		};
+	}
+
+	const styleStep = style[1];
+
+	return [
+		getStatus,
+		step,
+		mergedStyle,
+		asyncVisible() ?? visible,
+
+		// Appear Check
+		!mountedRef &&
+		currentStatus === STATUS_NONE &&
+		supportMotion &&
+		motionAppear
+			? "NONE"
+			: // Enter or Leave check
+				step === STEP_START || step === STEP_ACTIVE
+				? styleStep === step
+				: true,
+	];
+}
