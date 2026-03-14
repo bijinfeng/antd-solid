@@ -21,7 +21,7 @@
 		"solid-js": "catalog:dev",
 		"tsdown": "catalog:dev",
 		"typescript": "catalog:dev",
-		"vite": "^7.3.1",
+		"vite": "catalog:dev",
 		"vite-plugin-solid": "catalog:dev"
 	}
 }
