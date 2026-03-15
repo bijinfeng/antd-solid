@@ -17,6 +17,7 @@
 	},
 	"devDependencies": {
 		"@types/node": "catalog:types",
+		"less": "catalog:dev",
 		"publint": "catalog:dev",
 		"solid-js": "catalog:dev",
 		"tsdown": "catalog:dev",
