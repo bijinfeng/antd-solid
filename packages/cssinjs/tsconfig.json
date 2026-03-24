@@ -1,18 +1,18 @@
 {
-  "compilerOptions": {
-    "strict": true,
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "allowSyntheticDefaultImports": true,
-    "isolatedDeclarations": false,
-    "esModuleInterop": true,
-    "jsx": "preserve",
-    "jsxImportSource": "solid-js",
-    "types": ["vitest/globals"],
-    "outDir": "dist",
-    "declaration": true,
-    "skipLibCheck": true,
-  },
-  "include": ["src"],
+	"compilerOptions": {
+		"strict": true,
+		"target": "ESNext",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"allowSyntheticDefaultImports": true,
+		"isolatedDeclarations": false,
+		"esModuleInterop": true,
+		"jsx": "preserve",
+		"jsxImportSource": "solid-js",
+		"types": ["vitest/globals", "node"],
+		"outDir": "dist",
+		"declaration": true,
+		"skipLibCheck": true
+	},
+	"include": ["src"]
 }

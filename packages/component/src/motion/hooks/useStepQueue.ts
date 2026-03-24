@@ -30,12 +30,12 @@ export function isActive(step: StepStatus) {
 }
 
 export default (
-	status: MotionStatus,
-	prepareOnly: boolean,
+	status: () => MotionStatus,
+	prepareOnly: () => boolean,
 	callback: (
 		step: StepStatus,
 	) => Promise<void> | void | typeof SkipStep | typeof DoStep,
-): [() => void, StepStatus] => {
+): [() => void, () => StepStatus] => {
 	const [step, setStep] = createSignal<StepStatus>(STEP_NONE);
 
 	const [nextFrame, cancelNextFrame] = useNextFrame();
@@ -44,14 +44,20 @@ export default (
 		setStep(STEP_PREPARE);
 	}
 
-	const STEP_QUEUE = prepareOnly ? SIMPLE_STEP_QUEUE : FULL_STEP_QUEUE;
+	function getStepQueue() {
+		return prepareOnly() ? SIMPLE_STEP_QUEUE : FULL_STEP_QUEUE;
+	}
 
 	useIsomorphicLayoutEffect(() => {
-		if (step() !== STEP_NONE && step() !== STEP_ACTIVATED) {
-			const index = STEP_QUEUE.indexOf(step());
+		status();
+
+		const currentStep = step();
+		if (currentStep !== STEP_NONE && currentStep !== STEP_ACTIVATED) {
+			const STEP_QUEUE = getStepQueue();
+			const index = STEP_QUEUE.indexOf(currentStep);
 			const nextStep = STEP_QUEUE[index + 1];
 
-			const result = callback(step());
+			const result = callback(currentStep);
 
 			if (result === SkipStep) {
 				// Skip when no needed
@@ -81,5 +87,5 @@ export default (
 		cancelNextFrame();
 	});
 
-	return [startQueue, step()];
+	return [startQueue, step];
 };

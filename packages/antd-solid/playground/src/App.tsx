@@ -1,13 +1,12 @@
-import { MyButton, StyleTest } from "../../src";
+import { Space } from "../../src";
 
 export function App() {
 	return (
-		<>
-			<MyButton type="primary" />
-            <div style={{ padding: "20px" }}>
-                <h3>CSS-in-JS Test:</h3>
-                <StyleTest />
-            </div>
-		</>
+		<main>
+			<Space>
+				Space
+				<div>xxx</div>
+			</Space>
+		</main>
 	);
 }

@@ -24,5 +24,9 @@
 		"typescript": "catalog:dev",
 		"vite": "catalog:dev",
 		"vite-plugin-solid": "catalog:dev"
+	},
+	"exports": {
+		".": "./dist/index.mjs",
+		"./package.json": "./package.json"
 	}
 }

@@ -1,5 +1,5 @@
 import canUseDOM from "@antd-solidjs/util/dom/canUseDom";
-import type { MotionName } from "../CSSMotion";
+import type { MotionName } from "../interface";
 
 // ================= Transition =================
 // Event wrapper. Copy from react source code

@@ -1,8 +1,8 @@
 import { getDOM } from "@antd-solidjs/util/dom/findDOMNode";
-import type { Ref } from "@solid-primitives/refs";
+import { mergeRefs, type Ref } from "@solid-primitives/refs";
 import { clsx } from "clsx";
 import type { Component, JSX } from "solid-js";
-import { createEffect, createMemo, useContext } from "solid-js";
+import { createEffect, createMemo, mergeProps, useContext } from "solid-js";
 
 import { Context } from "./context";
 import useStatus from "./hooks/useStatus";
@@ -10,6 +10,7 @@ import { isActive } from "./hooks/useStepQueue";
 import type {
 	MotionEndEventHandler,
 	MotionEventHandler,
+	MotionName,
 	MotionPrepareEventHandler,
 	MotionStatus,
 } from "./interface";
@@ -26,17 +27,6 @@ export type CSSMotionConfig =
 	| boolean
 	| {
 			transitionSupport?: boolean;
-	  };
-
-export type MotionName =
-	| string
-	| {
-			appear?: string;
-			enter?: string;
-			leave?: string;
-			appearActive?: string;
-			enterActive?: string;
-			leaveActive?: string;
 	  };
 
 export interface CSSMotionProps {
@@ -121,138 +111,149 @@ export function genCSSMotion(config: CSSMotionConfig) {
 	}
 
 	const CSSMotion: Component<CSSMotionProps> = (props) => {
-		const {
-			ref,
-			// Default config
-			visible = true,
-			removeOnLeave = true,
-
-			forceRender,
-			children,
-			motionName,
-			leavedClassName,
-			eventProps,
-		} = props;
+		const mergedProps = mergeProps(
+			{ visible: true, removeOnLeave: true },
+			props,
+		);
 
 		const { motion: contextMotion } = useContext(Context);
 
-		const supportMotion = isSupportTransition(props, contextMotion);
+		const supportMotion = createMemo(() =>
+			isSupportTransition(mergedProps, contextMotion),
+		);
 
 		// Ref to the react node, it may be a HTMLElement
 		let nodeRef: any;
+		const setNodeRef: Ref<any> = (element) => {
+			nodeRef = element;
+		};
+		const mergedNodeRef = mergeRefs(mergedProps.internalRef, setNodeRef);
 
 		function getDomElement() {
 			return getDOM(nodeRef) as HTMLElement;
 		}
 
-		const [getStatus, statusStep, statusStyle, mergedVisible, styleReady] =
-			useStatus(supportMotion, visible, getDomElement, props);
-		const status = getStatus();
+		const [getStatus, getStep, getStyle, getMergedVisible, getStyleReady] =
+			useStatus(
+				supportMotion,
+				() => mergedProps.visible,
+				getDomElement,
+				mergedProps,
+			);
 
 		// Record whether content has rendered
 		// Will return null for un-rendered even when `removeOnLeave={false}`
-		let renderedRef = mergedVisible;
-		if (mergedVisible) {
-			renderedRef = true;
-		}
+		let renderedRef = false;
+		createEffect(() => {
+			if (getMergedVisible()) {
+				renderedRef = true;
+			}
+		});
 
 		// ====================== Refs ======================
-		const refObj = createMemo<CSSMotionRef>(() => {
-			const obj = {} as CSSMotionRef;
-			Object.defineProperties(obj, {
-				nativeElement: {
-					enumerable: true,
-					get: getDomElement,
-				},
-				inMotion: {
-					enumerable: true,
-					get: () => () => getStatus() !== STATUS_NONE,
-				},
-				enableMotion: {
-					enumerable: true,
-					get: () => () => supportMotion,
-				},
-			});
-			return obj;
+		const refObj = {} as CSSMotionRef;
+		Object.defineProperties(refObj, {
+			nativeElement: {
+				enumerable: true,
+				get: getDomElement,
+			},
+			inMotion: {
+				enumerable: true,
+				get: () => () => getStatus() !== STATUS_NONE,
+			},
+			enableMotion: {
+				enumerable: true,
+				get: () => () => supportMotion(),
+			},
 		});
 
 		// We lock `deps` here since function return object
 		// will repeat trigger ref from `refConfig` -> `null` -> `refConfig`
 		createEffect(() => {
+			const ref = mergedProps.ref;
 			if (typeof ref === "function") {
-				ref(refObj());
+				ref(refObj);
 			}
 		});
 
 		// ===================== Render =====================
-		// return motionChildren as React.ReactElement;
-		let idRef = 0;
-		if (styleReady) {
-			idRef += 1;
+		// We should render children when motionStyle is sync with stepStatus
+		const styleReady = getStyleReady();
+		if (styleReady === "NONE") {
+			return null;
 		}
 
-		// We should render children when motionStyle is sync with stepStatus
-		const memoChildren = createMemo(() => {
-			if (styleReady === "NONE") {
-				return null;
-			}
+		let motionChildren: JSX.Element;
+		const mergedChildrenProps = {
+			...(mergedProps.eventProps || {}),
+			visible: mergedProps.visible,
+		};
+		const status = getStatus();
+		const statusStep = getStep();
+		const statusStyle = getStyle();
+		const mergedVisible = getMergedVisible();
 
-			let motionChildren: JSX.Element;
-			const mergedProps = { ...eventProps, visible };
-
-			if (!children) {
-				// No children
-				motionChildren = null;
-			} else if (status === STATUS_NONE) {
-				// Stable children
-				if (mergedVisible) {
-					motionChildren = children({ ...mergedProps, ref: nodeRef });
-				} else if (!removeOnLeave && renderedRef && leavedClassName) {
-					motionChildren = children({
-						...mergedProps,
-						className: leavedClassName,
-						ref: nodeRef,
-					});
-				} else if (forceRender || (!removeOnLeave && !leavedClassName)) {
-					motionChildren = children({
-						...mergedProps,
-						style: { display: "none" },
-						ref: nodeRef,
-					});
-				} else {
-					motionChildren = null;
-				}
-			} else {
-				// In motion
-				let statusSuffix: string;
-				if (statusStep === STEP_PREPARE) {
-					statusSuffix = "prepare";
-				} else if (isActive(statusStep)) {
-					statusSuffix = "active";
-				} else if (statusStep === STEP_START) {
-					statusSuffix = "start";
-				}
-
-				const motionCls = getTransitionName(
-					motionName,
-					`${status}-${statusSuffix}`,
-				);
-
-				motionChildren = children({
-					...mergedProps,
-					className: clsx(getTransitionName(motionName, status), {
-						[motionCls]: motionCls && statusSuffix,
-						[motionName as string]: typeof motionName === "string",
-					}),
-					style: statusStyle,
-					ref: nodeRef,
+		if (!mergedProps.children) {
+			// No children
+			motionChildren = null;
+		} else if (status === STATUS_NONE) {
+			// Stable children
+			if (mergedVisible) {
+				motionChildren = mergedProps.children({
+					...mergedChildrenProps,
+					ref: mergedNodeRef,
 				});
+			} else if (
+				!mergedProps.removeOnLeave &&
+				renderedRef &&
+				mergedProps.leavedClassName
+			) {
+				motionChildren = mergedProps.children({
+					...mergedChildrenProps,
+					className: mergedProps.leavedClassName,
+					ref: mergedNodeRef,
+				});
+			} else if (
+				mergedProps.forceRender ||
+				(!mergedProps.removeOnLeave && !mergedProps.leavedClassName)
+			) {
+				motionChildren = mergedProps.children({
+					...mergedChildrenProps,
+					style: { display: "none" },
+					ref: mergedNodeRef,
+				});
+			} else {
+				motionChildren = null;
+			}
+		} else {
+			// In motion
+			let statusSuffix: string;
+			if (statusStep === STEP_PREPARE) {
+				statusSuffix = "prepare";
+			} else if (isActive(statusStep)) {
+				statusSuffix = "active";
+			} else if (statusStep === STEP_START) {
+				statusSuffix = "start";
 			}
 
-			return motionChildren;
-		});
+			const motionCls = getTransitionName(
+				mergedProps.motionName,
+				`${status}-${statusSuffix}`,
+			);
 
-		return memoChildren();
+			motionChildren = mergedProps.children({
+				...mergedChildrenProps,
+				className: clsx(getTransitionName(mergedProps.motionName, status), {
+					[motionCls]: motionCls && statusSuffix,
+					[mergedProps.motionName as string]:
+						typeof mergedProps.motionName === "string",
+				}),
+				style: statusStyle,
+				ref: mergedNodeRef,
+			});
+		}
+
+		return motionChildren;
 	};
 
 	return CSSMotion;

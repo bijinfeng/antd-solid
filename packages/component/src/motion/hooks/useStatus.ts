@@ -24,47 +24,26 @@ import useIsomorphicLayoutEffect from "./useIsomorphicLayoutEffect";
 import useStepQueue, { DoStep, isActive, SkipStep } from "./useStepQueue";
 
 export default function useStatus(
-	supportMotion: boolean,
-	visible: boolean,
+	supportMotion: () => boolean,
+	visible: () => boolean,
 	getElement: () => HTMLElement,
-	{
-		motionEnter = true,
-		motionAppear = true,
-		motionLeave = true,
-		motionDeadline,
-		motionLeaveImmediately,
-		onAppearPrepare,
-		onEnterPrepare,
-		onLeavePrepare,
-		onAppearStart,
-		onEnterStart,
-		onLeaveStart,
-		onAppearActive,
-		onEnterActive,
-		onLeaveActive,
-		onAppearEnd,
-		onEnterEnd,
-		onLeaveEnd,
-		onVisibleChanged,
-	}: CSSMotionProps,
+	props: CSSMotionProps,
 ): [
 	status: () => MotionStatus,
-	stepStatus: StepStatus,
-	style: JSX.CSSProperties,
-	visible: boolean,
-	styleReady: "NONE" | boolean,
+	stepStatus: () => StepStatus,
+	style: () => JSX.CSSProperties,
+	visible: () => boolean,
+	styleReady: () => "NONE" | boolean,
 ] {
 	// Used for outer render usage to avoid `visible: false & status: none` to render nothing
 	const [asyncVisible, setAsyncVisible] = createSignal<boolean>();
 	const [getStatus, setStatus] = createSignal<MotionStatus>(STATUS_NONE);
 	const [style, setStyle] = createSignal<
-		[style: JSX.CSSProperties | undefined, step: StepStatus]
+		[style: JSX.CSSProperties | undefined | null, step: StepStatus | null]
 	>([null, null]);
+	const [mounted, setMounted] = createSignal(false);
 
-	const currentStatus = getStatus();
-
-	let mountedRef = false;
-	const deadlineRef = null;
+	let deadlineId: ReturnType<typeof setTimeout> | null = null;
 
 	// =========================== Dom Node ===========================
 	function getDomElement() {
@@ -102,11 +81,11 @@ export default function useStatus(
 
 		let canEnd: boolean | void;
 		if (status === STATUS_APPEAR && currentActive) {
-			canEnd = onAppearEnd?.(element, event);
+			canEnd = props.onAppearEnd?.(element, event);
 		} else if (status === STATUS_ENTER && currentActive) {
-			canEnd = onEnterEnd?.(element, event);
+			canEnd = props.onEnterEnd?.(element, event);
 		} else if (status === STATUS_LEAVE && currentActive) {
-			canEnd = onLeaveEnd?.(element, event);
+			canEnd = props.onLeaveEnd?.(element, event);
 		}
 
 		// Only update status when `canEnd` and not destroyed
@@ -122,23 +101,23 @@ export default function useStatus(
 		switch (targetStatus) {
 			case STATUS_APPEAR:
 				return {
-					[STEP_PREPARE]: onAppearPrepare,
-					[STEP_START]: onAppearStart,
-					[STEP_ACTIVE]: onAppearActive,
+					[STEP_PREPARE]: props.onAppearPrepare,
+					[STEP_START]: props.onAppearStart,
+					[STEP_ACTIVE]: props.onAppearActive,
 				};
 
 			case STATUS_ENTER:
 				return {
-					[STEP_PREPARE]: onEnterPrepare,
-					[STEP_START]: onEnterStart,
-					[STEP_ACTIVE]: onEnterActive,
+					[STEP_PREPARE]: props.onEnterPrepare,
+					[STEP_START]: props.onEnterStart,
+					[STEP_ACTIVE]: props.onEnterActive,
 				};
 
 			case STATUS_LEAVE:
 				return {
-					[STEP_PREPARE]: onLeavePrepare,
-					[STEP_START]: onLeaveStart,
-					[STEP_ACTIVE]: onLeaveActive,
+					[STEP_PREPARE]: props.onLeavePrepare,
+					[STEP_START]: props.onLeaveStart,
+					[STEP_ACTIVE]: props.onLeaveActive,
 				};
 
 			default:
@@ -150,15 +129,17 @@ export default function useStatus(
 		[STEP_PREPARE]?: MotionPrepareEventHandler;
 		[STEP_START]?: MotionEventHandler;
 		[STEP_ACTIVE]?: MotionEventHandler;
-	}>(() => getEventHandlers(currentStatus));
+	}>(() => getEventHandlers(getStatus()));
 
 	const [startStep, step] = useStepQueue(
-		currentStatus,
-		!supportMotion,
+		getStatus,
+		() => !supportMotion(),
 		(newStep) => {
+			const currentHandlers = eventHandlers();
+
 			// Only prepare step can be skip
 			if (newStep === STEP_PREPARE) {
-				const onPrepare = eventHandlers[STEP_PREPARE];
+				const onPrepare = currentHandlers[STEP_PREPARE];
 				if (!onPrepare) {
 					return SkipStep;
 				}
@@ -167,20 +148,24 @@ export default function useStatus(
 			}
 
 			// Rest step is sync update
-			if (newStep in eventHandlers) {
+			if (newStep in currentHandlers) {
 				setStyle([
-					eventHandlers[newStep]?.(getDomElement(), null) || null,
+					currentHandlers[newStep]?.(getDomElement(), null) || null,
 					newStep,
 				]);
 			}
 
-			if (newStep === STEP_ACTIVE && currentStatus !== STATUS_NONE) {
+			if (newStep === STEP_ACTIVE && getStatus() !== STATUS_NONE) {
 				// Patch events when motion needed
 				patchMotionEvents(getDomElement());
 
+				const motionDeadline = props.motionDeadline;
 				if (motionDeadline > 0) {
-					clearTimeout(deadlineRef.current);
-					deadlineRef.current = setTimeout(() => {
+					if (deadlineId) {
+						clearTimeout(deadlineId);
+					}
+
+					deadlineId = setTimeout(() => {
 						onInternalMotionEnd({
 							deadline: true,
 						} as MotionEvent);
@@ -196,25 +181,34 @@ export default function useStatus(
 		},
 	);
 
-	const active = isActive(step);
-	activeRef = active;
+	createEffect(() => {
+		activeRef = isActive(step());
+	});
 
 	// ============================ Status ============================
 	let visibleRef: boolean | null = null;
+	const motionAppear = () => props.motionAppear ?? true;
+	const motionEnter = () => props.motionEnter ?? true;
+	const motionLeave = () => props.motionLeave ?? true;
+	const motionLeaveImmediately = () => props.motionLeaveImmediately;
 
 	// Update with new status
 	useIsomorphicLayoutEffect(() => {
+		const nextVisible = visible();
+
 		// When use Suspense, the `visible` will repeat trigger,
 		// But not real change of the `visible`, we need to skip it.
 		// https://github.com/ant-design/ant-design/issues/44379
-		if (mountedRef && visibleRef === visible) {
+		if (mounted() && visibleRef === nextVisible) {
 			return;
 		}
 
-		setAsyncVisible(visible);
+		setAsyncVisible(nextVisible);
 
-		const isMounted = mountedRef;
-		mountedRef = true;
+		const isMounted = mounted();
+		if (!isMounted) {
+			setMounted(true);
+		}
 
 		// if (!supportMotion) {
 		//   return;
@@ -223,19 +217,19 @@ export default function useStatus(
 		let nextStatus: MotionStatus;
 
 		// Appear
-		if (!isMounted && visible && motionAppear) {
+		if (!isMounted && nextVisible && motionAppear()) {
 			nextStatus = STATUS_APPEAR;
 		}
 
 		// Enter
-		if (isMounted && visible && motionEnter) {
+		if (isMounted && nextVisible && motionEnter()) {
 			nextStatus = STATUS_ENTER;
 		}
 
 		// Leave
 		if (
-			(isMounted && !visible && motionLeave) ||
-			(!isMounted && motionLeaveImmediately && !visible && motionLeave)
+			(isMounted && !nextVisible && motionLeave()) ||
+			(!isMounted && motionLeaveImmediately() && !nextVisible && motionLeave())
 		) {
 			nextStatus = STATUS_LEAVE;
 		}
@@ -243,7 +237,7 @@ export default function useStatus(
 		const nextEventHandlers = getEventHandlers(nextStatus);
 
 		// Update to next status
-		if (nextStatus && (supportMotion || nextEventHandlers[STEP_PREPARE])) {
+		if (nextStatus && (supportMotion() || nextEventHandlers[STEP_PREPARE])) {
 			setStatus(nextStatus);
 			startStep();
 		} else {
@@ -251,27 +245,31 @@ export default function useStatus(
 			setStatus(STATUS_NONE);
 		}
 
-		visibleRef = visible;
+		visibleRef = nextVisible;
 	});
 
 	// ============================ Effect ============================
 	// Reset when motion changed
 	createEffect(() => {
+		const currentStatus = getStatus();
 		if (
 			// Cancel appear
-			(currentStatus === STATUS_APPEAR && !motionAppear) ||
+			(currentStatus === STATUS_APPEAR && !motionAppear()) ||
 			// Cancel enter
-			(currentStatus === STATUS_ENTER && !motionEnter) ||
+			(currentStatus === STATUS_ENTER && !motionEnter()) ||
 			// Cancel leave
-			(currentStatus === STATUS_LEAVE && !motionLeave)
+			(currentStatus === STATUS_LEAVE && !motionLeave())
 		) {
 			setStatus(STATUS_NONE);
 		}
 	});
 
 	onCleanup(() => {
-		mountedRef = false;
-		clearTimeout(deadlineRef.current);
+		setMounted(false);
+		if (deadlineId) {
+			clearTimeout(deadlineId);
+			deadlineId = null;
+		}
 	});
 
 	// Trigger `onVisibleChanged`
@@ -282,41 +280,54 @@ export default function useStatus(
 			firstMountChangeRef = true;
 		}
 
-		if (asyncVisible() !== undefined && currentStatus === STATUS_NONE) {
+		if (asyncVisible() !== undefined && getStatus() === STATUS_NONE) {
 			// Skip first render is invisible since it's nothing changed
 			if (firstMountChangeRef || asyncVisible()) {
-				onVisibleChanged?.(asyncVisible());
+				props.onVisibleChanged?.(asyncVisible());
 			}
 			firstMountChangeRef = true;
 		}
 	});
 
 	// ============================ Styles ============================
-	let mergedStyle = style[0];
-	if (eventHandlers[STEP_PREPARE] && step === STEP_START) {
-		mergedStyle = {
-			transition: "none",
-			...mergedStyle,
-		};
-	}
+	const mergedStyle = createMemo<JSX.CSSProperties>(() => {
+		const [currentStyle] = style();
+		const currentHandlers = eventHandlers();
 
-	const styleStep = style[1];
+		if (currentHandlers[STEP_PREPARE] && step() === STEP_START) {
+			return {
+				transition: "none",
+				...(currentStyle || {}),
+			} as JSX.CSSProperties;
+		}
 
-	return [
-		getStatus,
-		step,
-		mergedStyle,
-		asyncVisible() ?? visible,
+		return (currentStyle || null) as JSX.CSSProperties;
+	});
+
+	const mergedVisible = createMemo(() => asyncVisible() ?? visible());
+
+	const styleReady = createMemo<"NONE" | boolean>(() => {
+		const currentStatus = getStatus();
+		const currentStep = step();
+		const [, styleStep] = style();
 
 		// Appear Check
-		!mountedRef &&
-		currentStatus === STATUS_NONE &&
-		supportMotion &&
-		motionAppear
-			? "NONE"
-			: // Enter or Leave check
-				step === STEP_START || step === STEP_ACTIVE
-				? styleStep === step
-				: true,
-	];
+		if (
+			!mounted() &&
+			currentStatus === STATUS_NONE &&
+			supportMotion() &&
+			motionAppear()
+		) {
+			return "NONE";
+		}
+
+		// Enter or Leave check
+		if (currentStep === STEP_START || currentStep === STEP_ACTIVE) {
+			return styleStep === currentStep;
+		}
+
+		return true;
+	});
+
+	return [getStatus, step, mergedStyle, mergedVisible, styleReady];
 }
