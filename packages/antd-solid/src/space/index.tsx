@@ -1,6 +1,14 @@
+import { destructure } from "@solid-primitives/destructure";
 import { clsx } from "clsx";
 import type { Component, JSX } from "solid-js";
-import { createMemo, Index, children as solidChildren } from "solid-js";
+import {
+	createMemo,
+	Index,
+	mergeProps,
+	children as solidChildren,
+	splitProps,
+} from "solid-js";
+
 import type { SizeType } from "../_type";
 import { isPresetSize, isValidGapNumber } from "../_util/gapSize";
 import type {
@@ -63,95 +71,90 @@ export interface SpaceProps extends JSX.HTMLAttributes<HTMLDivElement> {
 	styles?: SpaceStylesType;
 }
 
-const InternalSpace: Component<SpaceProps> = (props) => {
-	const {
-		getPrefixCls,
-		direction: directionConfig,
-		size: contextSize,
-		class: contextClassName,
-		style: contextStyle,
-		classes: contextClassNames,
-		styles: contextStyles,
-	} = useComponentConfig("space");
+const InternalSpace: Component<SpaceProps> = (_props) => {
+	const config = useComponentConfig("space");
 
-	const {
-		size = contextSize ?? "small",
-		align,
-		class: className,
-		rootClassName,
-		children,
-		orientation,
-		prefixCls: customizePrefixCls,
-		separator,
-		style,
-		vertical,
-		wrap = false,
-		classes,
-		styles,
-		...restProps
-	} = props;
+	const [props, restProps] = splitProps(
+		mergeProps({ size: config.size ?? "small", wrap: false }, _props),
+		[
+			"size",
+			"align",
+			"class",
+			"rootClassName",
+			"children",
+			"orientation",
+			"prefixCls",
+			"separator",
+			"style",
+			"vertical",
+			"wrap",
+			"classes",
+			"styles",
+		],
+	);
 
 	const sizes = createMemo(() =>
-		Array.isArray(size) ? size : ([size, size] as const),
+		Array.isArray(props.size)
+			? props.size
+			: ([props.size, props.size] as const),
 	);
 	const isPresetVerticalSize = createMemo(() => isPresetSize(sizes()[1]));
 	const isPresetHorizontalSize = createMemo(() => isPresetSize(sizes()[0]));
 	const isValidVerticalSize = createMemo(() => isValidGapNumber(sizes()[1]));
 	const isValidHorizontalSize = createMemo(() => isValidGapNumber(sizes()[0]));
 
-	const [mergedOrientation, mergedVertical] = useOrientation(
-		orientation,
-		vertical,
+	const [mergedOrientation, mergedVertical] = destructure(() =>
+		useOrientation(props.orientation, props.vertical),
 	);
 
 	const mergedAlign = createMemo(() =>
-		align === undefined && !mergedVertical() ? "center" : align,
+		props.align === undefined && !mergedVertical() ? "center" : props.align,
 	);
 
-	const prefixCls = getPrefixCls("space", customizePrefixCls);
+	const prefixCls = createMemo(() =>
+		config.getPrefixCls("space", props.prefixCls),
+	);
 
-	const [hashId, cssVarCls] = useStyle(prefixCls);
+	const [hashId, cssVarCls] = destructure(() => useStyle(prefixCls()));
 
-	// =========== Merged Props for Semantic ==========
-	const mergedProps: SpaceProps = {
-		...props,
-		size,
-		orientation: mergedOrientation(),
-		align: mergedAlign(),
-	};
-
-	const [mergedClassNames, mergedStyles] = useMergeSemantic<
-		SpaceClassNamesType,
-		SpaceStylesType,
-		SpaceProps
-	>([contextClassNames, classes], [contextStyles, styles], {
-		props: mergedProps,
+	const [mergedClassNames, mergedStyles] = destructure(() => {
+		// =========== Merged Props for Semantic ==========
+		const mergedProps = mergeProps(props, {
+			size: props.size,
+			orientation: mergedOrientation(),
+			align: mergedAlign(),
+		});
+		return useMergeSemantic<SpaceClassNamesType, SpaceStylesType, SpaceProps>(
+			[config.classes, props.classes],
+			[config.styles, props.styles],
+			{ props: mergedProps },
+		);
 	});
 
 	const rootClassNames = createMemo(() => {
 		return clsx(
-			prefixCls,
-			contextClassName,
-			hashId,
-			`${prefixCls}-${mergedOrientation()}`,
+			prefixCls(),
+			config.class,
+			hashId(),
+			`${prefixCls()}-${mergedOrientation()}`,
 			{
-				[`${prefixCls}-rtl`]: directionConfig === "rtl",
-				[`${prefixCls}-align-${mergedAlign}`]: mergedAlign,
-				[`${prefixCls}-gap-row-${sizes()[1]}`]: isPresetVerticalSize(),
-				[`${prefixCls}-gap-col-${sizes()[0]}`]: isPresetHorizontalSize(),
+				[`${prefixCls()}-rtl`]: config.direction === "rtl",
+				[`${prefixCls()}-align-${mergedAlign()}`]: mergedAlign(),
+				[`${prefixCls()}-gap-row-${sizes()[1]}`]: isPresetVerticalSize(),
+				[`${prefixCls()}-gap-col-${sizes()[0]}`]: isPresetHorizontalSize(),
 			},
-			className,
-			rootClassName,
-			cssVarCls,
+			props.class,
+			props.rootClassName,
+			cssVarCls(),
 			mergedClassNames().root,
 		);
 	});
 
 	const itemClassName = createMemo(() =>
-		clsx(`${prefixCls}-item`, mergedClassNames().item),
+		clsx(`${prefixCls()}-item`, mergedClassNames().item),
 	);
 
-	const childNodes = solidChildren(() => children);
+	const childNodes = solidChildren(() => props.children);
 
 	const memoizedSpaceContext = createMemo<SpaceContextType>(() => {
 		const calcLatestIndex = childNodes
@@ -166,7 +169,7 @@ const InternalSpace: Component<SpaceProps> = (props) => {
 	const mergedStyle = createMemo<JSX.CSSProperties>(() => {
 		const gapStyle: JSX.CSSProperties = {};
 
-		if (wrap) {
+		if (props.wrap) {
 			gapStyle["flex-wrap"] = "wrap";
 		}
 
@@ -178,7 +181,12 @@ const InternalSpace: Component<SpaceProps> = (props) => {
 			gapStyle["row-gap"] = `${sizes()[1]}px`;
 		}
 
-		return { ...gapStyle, ...mergedStyles().root, ...contextStyle, ...style };
+		return {
+			...gapStyle,
+			...mergedStyles().root,
+			...config.styles,
+			...props.style,
+		};
 	});
 
 	return (
@@ -187,12 +195,12 @@ const InternalSpace: Component<SpaceProps> = (props) => {
 				<Index each={childNodes.toArray()}>
 					{(child, i) => (
 						<Item
-							prefix={prefixCls}
+							prefix={prefixCls()}
 							classes={mergedClassNames()}
 							styles={mergedStyles()}
 							class={itemClassName()}
 							index={i}
-							separator={separator}
+							separator={props.separator}
 							style={mergedStyles().item}
 						>
 							{child()}

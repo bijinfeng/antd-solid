@@ -1,12 +1,23 @@
-import { Space } from "../../src";
+import { createSignal } from "solid-js";
+
+import { Space, type SpaceProps } from "../../src";
 
 export function App() {
+	const [orientation, setOrientation] =
+		createSignal<SpaceProps["orientation"]>();
+
 	return (
 		<main>
-			<Space>
+			<div>orientation: {orientation()}</div>
+
+			<Space orientation={orientation()}>
 				Space
 				<div>xxx</div>
 			</Space>
+
+			<button onClick={() => setOrientation("vertical")} type="button">
+				vertical
+			</button>
 		</main>
 	);
 }

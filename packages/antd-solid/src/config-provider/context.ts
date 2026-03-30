@@ -1,4 +1,5 @@
-import { createContext, type JSX, useContext } from "solid-js";
+import type { JSX } from "solid-js";
+import { createContext, mergeProps, useContext } from "solid-js";
 
 import type { WarningContextProps } from "../_util/warning";
 import type { EmptyProps } from "../empty";
@@ -217,16 +218,26 @@ export function useComponentConfig<T extends keyof ConfigComponentProps>(
 	propName: T,
 ) {
 	const context = useContext(ConfigContext);
-	const { getPrefixCls, direction, getPopupContainer, renderEmpty } = context;
 
-	const propValue = context[propName];
-	return {
-		classes: EMPTY_OBJECT,
-		styles: EMPTY_OBJECT,
-		...propValue,
-		direction,
-		getPrefixCls,
-		getPopupContainer,
-		renderEmpty,
-	} as ComponentReturnType<T>;
+	return mergeProps(
+		{
+			classes: EMPTY_OBJECT,
+			styles: EMPTY_OBJECT,
+		},
+		context[propName] || {},
+		{
+			get direction() {
+				return context.direction;
+			},
+			get getPrefixCls() {
+				return context.getPrefixCls;
+			},
+			get getPopupContainer() {
+				return context.getPopupContainer;
+			},
+			get renderEmpty() {
+				return context.renderEmpty;
+			},
+		},
+	) as unknown as ComponentReturnType<T>;
 }

@@ -55,10 +55,11 @@
 	"dependencies": {
 		"@ant-design/colors": "^8.0.1",
 		"@ant-design/fast-color": "^3.0.1",
-		"@antd-solidjs/icons": "workspace:*",
 		"@antd-solidjs/cssinjs": "workspace:*",
 		"@antd-solidjs/cssinjs-utils": "workspace:*",
+		"@antd-solidjs/icons": "workspace:*",
 		"@antd-solidjs/util": "workspace:*",
+		"@solid-primitives/destructure": "^0.2.3",
 		"clsx": "catalog:prod"
 	}
 }
